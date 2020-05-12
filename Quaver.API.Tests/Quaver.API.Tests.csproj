@@ -14,6 +14,12 @@
     <None Update="Malody\Resources\1574436578.mc">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="O2Jam\Resources\o2ma500.ojm">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="O2Jam\Resources\o2ma500.ojn">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Osu\Resources\uma vs. Morimori Atsushi - ReEnd of a Dream %28Critical_Star%29 [Another].osu">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
