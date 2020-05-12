@@ -15,7 +15,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             {
                 ojnParser = new OjnParser(ojnFilePath)
             };
-            o2jamFile.ojmParser = new OjmParser(o2jamFile.ojmParser.OjmFile);
+            o2jamFile.ojmParser = new OjmParser(o2jamFile.ojnParser.OjmFile);
 
 
             return o2jamFile;

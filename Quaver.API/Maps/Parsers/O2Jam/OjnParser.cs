@@ -81,9 +81,11 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 
         private OjnNoteFile ParseDifficulty(int level, int noteCount, int playableNoteCount, int measureCount, int packagesCount, int duration, int startingNoteOffset)
         {
-            var noteFile = new OjnNoteFile();
+            var noteFile = new OjnNoteFile
+            {
+                Level = level
+            };
             stream.Position = startingNoteOffset;
-            noteFile.Level = "Lv. " + level;
 
 
             return noteFile;

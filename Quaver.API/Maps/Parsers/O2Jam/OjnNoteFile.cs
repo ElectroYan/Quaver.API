@@ -7,5 +7,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
     public class OjnNoteFile
     {
         public int Level { get; set; }
+
+        public static string LevelToString(int level) => "Lv. " + level;
     }
 }
