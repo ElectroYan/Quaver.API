@@ -12,7 +12,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 
         public void Parse()
         {
-            
+
             var enc = new UTF8Encoding(true);
             var fileSignature = enc.GetString(ReadBytes(4));
             switch (fileSignature)
@@ -187,10 +187,10 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                     UnkMusicFlag = BitConverter.ToInt32(ReadBytes(4), 0),
                     SampleNoteIndex = BitConverter.ToInt16(ReadBytes(2), 0),
                     UnkZero = BitConverter.ToInt16(ReadBytes(2), 0),
-                    PCMSamples = BitConverter.ToInt32(ReadBytes(4), 0),
+                    PcmSamples = BitConverter.ToInt32(ReadBytes(4), 0),
                 };
                 sample.Data = ReadBytes(sample.SampleSize);
-                for (var j = 0; j < sample.SampleSize-4; j+=4)
+                for (var j = 0; j < sample.SampleSize - 4; j += 4)
                 {
                     sample.Data[j + 0] = (byte)('n' ^ sample.Data[j + 0]);
                     sample.Data[j + 1] = (byte)('a' ^ sample.Data[j + 1]);
