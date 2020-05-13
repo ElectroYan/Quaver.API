@@ -10,11 +10,13 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         private readonly FileStream stream;
         public OjmParser(string filePath) => stream = new FileStream(filePath, FileMode.Open);
 
+        private ByteDecoder decoder;
+
         public void Parse()
         {
 
-            var enc = new UTF8Encoding(true);
-            var fileSignature = enc.GetString(ReadBytes(4));
+            decoder = new ByteDecoder(stream);
+            var fileSignature = decoder.ReadString(4);
             switch (fileSignature)
             {
                 case "M30\0":
@@ -30,14 +32,50 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             stream.Close();
         }
 
-        private void ParseAsOMC()
+        private void ParseAsM30()
         {
             var enc = new UTF8Encoding(true);
-            var wavSampleCount = BitConverter.ToInt16(ReadBytes(2), 0);
-            var oggSampleCount = BitConverter.ToInt16(ReadBytes(2), 0);
-            var wavStartOffset = BitConverter.ToInt32(ReadBytes(4), 0);
-            var oggStartOffset = BitConverter.ToInt32(ReadBytes(4), 0);
-            var fileSize = BitConverter.ToInt32(ReadBytes(4), 0);
+            var version = decoder.ReadInt();
+            var encryptionSign = decoder.ReadInt();
+            var sampleCount = decoder.ReadInt();
+            var sampleStartOffset = decoder.ReadInt();
+            var sampleDataSize = decoder.ReadInt();
+            var padding = decoder.ReadBytes(4);
+
+            var samples = new List<OjmSampleOgg>();
+
+            for (var i = 0; i < sampleCount; i++)
+            {
+                var sample = new OjmSampleOgg
+                {
+                    SampleName = decoder.ReadString(32),
+                    SampleSize = decoder.ReadInt(),
+                    SampleType = decoder.ReadShort(),
+                    UnkFixedData = decoder.ReadShort(),
+                    UnkMusicFlag = decoder.ReadInt(),
+                    SampleNoteIndex = decoder.ReadShort(),
+                    UnkZero = decoder.ReadShort(),
+                    PcmSamples = decoder.ReadInt(),
+                };
+                sample.Data = decoder.ReadBytes(sample.SampleSize);
+                for (var j = 0; j < sample.SampleSize - 4; j += 4)
+                {
+                    sample.Data[j + 0] = (byte)('n' ^ sample.Data[j + 0]);
+                    sample.Data[j + 1] = (byte)('a' ^ sample.Data[j + 1]);
+                    sample.Data[j + 2] = (byte)('m' ^ sample.Data[j + 2]);
+                    sample.Data[j + 3] = (byte)('i' ^ sample.Data[j + 3]);
+                }
+                samples.Add(sample);
+            }
+        }
+
+        private void ParseAsOMC()
+        {
+            var wavSampleCount = decoder.ReadSingle();
+            var oggSampleCount = decoder.ReadSingle();
+            var wavStartOffset = decoder.ReadInt();
+            var oggStartOffset = decoder.ReadInt();
+            var fileSize = decoder.ReadInt();
 
             var wavSamples = new List<OjmSampleWav>();
             stream.Position = wavStartOffset;
@@ -45,16 +83,16 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             {
                 var sample = new OjmSampleWav
                 {
-                    SampleName = enc.GetString(ReadBytes(32)),
-                    AudioFormat = BitConverter.ToInt16(ReadBytes(2), 0),
-                    ChannelCount = BitConverter.ToInt16(ReadBytes(2), 0),
-                    BitRate = BitConverter.ToInt32(ReadBytes(4), 0),
-                    BlockAlign = BitConverter.ToInt16(ReadBytes(2), 0),
-                    BitPerSample = BitConverter.ToInt16(ReadBytes(2), 0),
-                    ChunkData = BitConverter.ToInt32(ReadBytes(4), 0),
-                    SampleSize = BitConverter.ToInt32(ReadBytes(4), 0),
+                    SampleName = decoder.ReadString(32),
+                    AudioFormat = decoder.ReadShort(),
+                    ChannelCount = decoder.ReadShort(),
+                    BitRate = decoder.ReadInt(),
+                    BlockAlign = decoder.ReadShort(),
+                    BitPerSample = decoder.ReadShort(),
+                    ChunkData = decoder.ReadInt(),
+                    SampleSize = decoder.ReadInt(),
                 };
-                sample.Data = AccXor(Rearrange(ReadBytes(sample.SampleSize)));
+                sample.Data = AccXor(Rearrange(decoder.ReadBytes(sample.SampleSize)));
                 wavSamples.Add(sample);
             }
 
@@ -64,18 +102,17 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             {
                 var sample = new OjmSampleOgg
                 {
-                    SampleName = enc.GetString(ReadBytes(32)),
-                    SampleSize = BitConverter.ToInt32(ReadBytes(4), 0)
+                    SampleName = decoder.ReadString(32),
+                    SampleSize = decoder.ReadInt()
                 };
-                sample.Data = ReadBytes(sample.SampleSize);
+                sample.Data = decoder.ReadBytes(sample.SampleSize);
                 oggSamples.Add(sample);
             }
 
             stream.Close();
         }
 
-
-        // Copied from documentation
+        // vvv Following code is copied from the O2Jam is documentation vvv
         private static readonly byte[] REARRANGE_TABLE = new byte[]{
             0x10, 0x0E, 0x02, 0x09, 0x04, 0x00, 0x07, 0x01,
             0x06, 0x08, 0x0F, 0x0A, 0x05, 0x0C, 0x03, 0x0D,
@@ -115,7 +152,6 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             0x08, 0x0C, 0x09, 0x06, 0x0F, 0x10, 0x05, 0x0A,
             0x04, 0x00
         };
-
 
         private static byte[] Rearrange(byte[] buf_encoded)
         {
@@ -162,50 +198,6 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                 }
             }
             return buf;
-        }
-
-        private void ParseAsM30()
-        {
-            var enc = new UTF8Encoding(true);
-            var version = BitConverter.ToInt32(ReadBytes(4), 0);
-            var encryptionSign = BitConverter.ToInt32(ReadBytes(4), 0);
-            var sampleCount = BitConverter.ToInt32(ReadBytes(4), 0);
-            var sampleStartOffset = BitConverter.ToInt32(ReadBytes(4), 0);
-            var sampleDataSize = BitConverter.ToInt32(ReadBytes(4), 0);
-            var padding = ReadBytes(4);
-
-            var samples = new List<OjmSampleOgg>();
-
-            for (var i = 0; i < sampleCount; i++)
-            {
-                var sample = new OjmSampleOgg
-                {
-                    SampleName = enc.GetString(ReadBytes(32)),
-                    SampleSize = BitConverter.ToInt32(ReadBytes(4), 0),
-                    SampleType = BitConverter.ToInt16(ReadBytes(2), 0),
-                    UnkFixedData = BitConverter.ToInt16(ReadBytes(2), 0),
-                    UnkMusicFlag = BitConverter.ToInt32(ReadBytes(4), 0),
-                    SampleNoteIndex = BitConverter.ToInt16(ReadBytes(2), 0),
-                    UnkZero = BitConverter.ToInt16(ReadBytes(2), 0),
-                    PcmSamples = BitConverter.ToInt32(ReadBytes(4), 0),
-                };
-                sample.Data = ReadBytes(sample.SampleSize);
-                for (var j = 0; j < sample.SampleSize - 4; j += 4)
-                {
-                    sample.Data[j + 0] = (byte)('n' ^ sample.Data[j + 0]);
-                    sample.Data[j + 1] = (byte)('a' ^ sample.Data[j + 1]);
-                    sample.Data[j + 2] = (byte)('m' ^ sample.Data[j + 2]);
-                    sample.Data[j + 3] = (byte)('i' ^ sample.Data[j + 3]);
-                }
-                samples.Add(sample);
-            }
-        }
-
-        private byte[] ReadBytes(int count)
-        {
-            var bytes = new byte[count];
-            stream.Read(bytes, 0, count);
-            return bytes;
         }
     }
 }
