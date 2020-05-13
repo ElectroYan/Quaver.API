@@ -1,6 +1,8 @@
 using Quaver.API.Maps.Parsers.O2Jam.EventPackages;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace Quaver.API.Maps.Parsers.O2Jam
 {
@@ -27,10 +29,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             Duration = duration;
             StartingNoteOffset = startingNoteOffset;
             MainPackages = packages;
-
         }
-
-        public static string LevelToString(int level) => "Lv. " + level;
 
         public int[] GetActualPlayableNoteCounts()
         {
@@ -44,6 +43,8 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 
             return noteCountArray;
         }
+
+        public int GetActualMeasureCount() => MainPackages.Select(mainPackage => mainPackage.Measure).Max();
 
         public bool Validate()
         {
@@ -59,5 +60,38 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             return packageCountOk && eventCountsOk && noteCountOk;
         }
 
+        public void Dump(bool printMeasurementEvents = false, bool printBpmEvents = false, bool printNoteEvents = false)
+        {
+
+            var debugString = new StringBuilder();
+
+            foreach (var mainPackage in MainPackages)
+            {
+                debugString.Append($"M {mainPackage.Measure}, C {mainPackage.Channel}\n");
+                foreach (var eventPackage in mainPackage.EventPackages)
+                {
+                    switch (eventPackage)
+                    {
+                        case O2JamMeasurementEventPackage measurementEvent:
+                            if (printMeasurementEvents)
+                                debugString.Append($"    MEA {measurementEvent.Measurement}\n");
+                            break;
+                        case O2JamBpmEventPackage bpmEvent:
+                            if (printBpmEvents)
+                                debugString.Append($"    BPM {bpmEvent.Bpm}\n");
+                            break;
+                        case O2JamNoteEventPackage noteEvent:
+                            if (printNoteEvents)
+                                debugString.Append($"    INDEX {noteEvent.IndexIndicator}, PAN {noteEvent.PanSound}, VOL {noteEvent.VolumeNote}, TYPE {noteEvent.NoteType}\n");
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            System.IO.File.WriteAllText(@"C:\temp.txt", debugString.ToString());
+
+        }
     }
 }
