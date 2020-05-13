@@ -23,5 +23,13 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         public short ReadShort() => BitConverter.ToInt16(ReadBytes(2), 0);
         public int ReadInt() => BitConverter.ToInt32(ReadBytes(4), 0);
         public float ReadSingle() => BitConverter.ToSingle(ReadBytes(4), 0);
+
+        public T[] ReadArray<T>(Func<T> func, int n)
+        {
+            var array = new List<T>();
+            for (var i = 0; i < n; i++)
+                array.Add(func());
+            return array.ToArray();
+        }
     }
 }

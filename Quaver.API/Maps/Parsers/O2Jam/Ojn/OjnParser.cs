@@ -9,12 +9,18 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 {
     public class OjnParser
     {
-        private readonly FileStream stream;
-        public OjnParser(string filePath) => stream = new FileStream(filePath, FileMode.Open);
 
         private ByteDecoder decoder;
+        private readonly FileStream stream;
+        public OjnParser(string filePath)
+        {
+            OriginalFilePath = filePath;
+            stream = new FileStream(filePath, FileMode.Open);
+        }
 
-        public const int NUMBER_OF_DIFFICULTIES = 3; // Easy, Normal, Hard
+        private readonly int numberOfDifficulties = Enum.GetNames(typeof(O2JamDifficulty)).Length; // Easy, Normal, Hard
+
+        public string OriginalFilePath { get; set; }
 
         public int IDSong { get; set; }
         public string FileSignature { get; set; }
@@ -44,29 +50,12 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             EncodeOJNVersion = decoder.ReadBytes(4);
             GenreOfSong = (O2JamGenre)decoder.ReadInt();
             BpmSong = decoder.ReadBytes(4);
-
-            var levels = new short[NUMBER_OF_DIFFICULTIES];
-            for (var i = 0; i < NUMBER_OF_DIFFICULTIES; i++)
-                levels[i] = decoder.ReadShort();
-
+            var levels = decoder.ReadArray(decoder.ReadShort, numberOfDifficulties);
             EmptyField = decoder.ReadShort();
-
-            var noteCounts = new int[NUMBER_OF_DIFFICULTIES];
-            for (var i = 0; i < NUMBER_OF_DIFFICULTIES; i++)
-                noteCounts[i] = decoder.ReadInt();
-
-            var playableNoteCounts = new int[NUMBER_OF_DIFFICULTIES];
-            for (var i = 0; i < NUMBER_OF_DIFFICULTIES; i++)
-                playableNoteCounts[i] = decoder.ReadInt();
-
-            var measureCounts = new int[NUMBER_OF_DIFFICULTIES];
-            for (var i = 0; i < NUMBER_OF_DIFFICULTIES; i++)
-                measureCounts[i] = decoder.ReadInt();
-
-            var packageCounts = new int[NUMBER_OF_DIFFICULTIES];
-            for (var i = 0; i < NUMBER_OF_DIFFICULTIES; i++)
-                packageCounts[i] = decoder.ReadInt();
-
+            var noteCounts = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
+            var playableNoteCounts = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
+            var measureCounts = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
+            var packageCounts = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
             OldEncodeVersion = decoder.ReadShort();
             OldSongID = decoder.ReadShort();
             OldGenre = decoder.ReadString(20);
@@ -77,20 +66,13 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             Notecharter = decoder.ReadString(32);
             OjmFile = decoder.ReadString(32);
             SizeOfJPGFile = decoder.ReadInt();
-
-            var durations = new int[NUMBER_OF_DIFFICULTIES];
-            for (var i = 0; i < NUMBER_OF_DIFFICULTIES; i++)
-                durations[i] = decoder.ReadInt();
-
-            var startingNoteOffsets = new int[NUMBER_OF_DIFFICULTIES];
-            for (var i = 0; i < NUMBER_OF_DIFFICULTIES; i++)
-                startingNoteOffsets[i] = decoder.ReadInt();
-
+            var durations = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
+            var startingNoteOffsets = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
             ImageOffset = decoder.ReadInt();
 
             Difficulties = new List<OjnNoteChart>();
 
-            for (var difficulty = 0; difficulty < NUMBER_OF_DIFFICULTIES; difficulty++)
+            for (var difficulty = 0; difficulty < numberOfDifficulties; difficulty++)
                 Difficulties.Add(ParseDifficulty(
                     (O2JamDifficulty)difficulty,
                     levels[difficulty],
@@ -102,7 +84,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                     startingNoteOffsets[difficulty]
                 ));
 
-            Console.WriteLine("Hello World!");
+            stream.Close();
         }
 
         private OjnNoteChart ParseDifficulty(O2JamDifficulty difficulty, int level, int noteCount, int playableNoteCount, int measureCount, int packageCount, int duration, int startingNoteOffset)
