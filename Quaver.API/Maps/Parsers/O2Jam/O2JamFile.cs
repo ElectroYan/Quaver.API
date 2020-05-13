@@ -19,12 +19,11 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             OjnParser = new OjnParser(ojnFilePath);
             OjnParser.Parse();
 
-            IsValid = true;
+            OjmParser = new OjmParser(OjnParser);
 
+            IsValid = true;
             foreach (O2JamDifficulty difficulty in Enum.GetValues(typeof(O2JamDifficulty)))
                 IsValid &= OjnParser.GetDifficulty(difficulty).Validate();
-
-            Console.WriteLine();
 
         }
     }

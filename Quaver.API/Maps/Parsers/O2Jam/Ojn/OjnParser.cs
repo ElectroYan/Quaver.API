@@ -14,13 +14,13 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         private readonly FileStream stream;
         public OjnParser(string filePath)
         {
-            OriginalFilePath = filePath;
+            OriginalDirectory = Path.GetDirectoryName(filePath);
             stream = new FileStream(filePath, FileMode.Open);
         }
 
         private readonly int numberOfDifficulties = Enum.GetNames(typeof(O2JamDifficulty)).Length; // Easy, Normal, Hard
 
-        public string OriginalFilePath { get; set; }
+        public string OriginalDirectory { get; set; }
 
         public int IDSong { get; set; }
         public string FileSignature { get; set; }
