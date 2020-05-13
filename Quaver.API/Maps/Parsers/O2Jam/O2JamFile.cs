@@ -1,10 +1,6 @@
-using Quaver.API.Maps.Parsers.O2Jam.EventPackages;
+using Quaver.API.Maps.Structures;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Security.Authentication.ExtendedProtection;
-using System.Text;
 
 namespace Quaver.API.Maps.Parsers.O2Jam
 {
@@ -26,5 +22,52 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                 IsValid &= OjnParser.GetDifficulty(difficulty).Validate();
 
         }
+
+        public List<Qua> ToQua()
+        {
+            var quaList = new List<Qua>();
+            foreach (O2JamDifficulty difficulty in Enum.GetValues(typeof(O2JamDifficulty)))
+                ToQua(difficulty);
+            return quaList;
+        }
+
+        public Qua ToQua(O2JamDifficulty difficulty)
+        {
+            var qua = new Qua
+            {
+                MapId = -1,
+                MapSetId = -1,
+                Mode = Enums.GameMode.Keys7,
+                Source = "O2Jam",
+                HasScratchKey = false,
+
+                Artist = OjnParser.Artist,
+                Title = OjnParser.Title,
+                Creator = OjnParser.NoteCharter,
+                DifficultyName = Enum.GetName(typeof(O2JamDifficulty), difficulty),
+                Tags = Enum.GetName(typeof(O2JamGenre), OjnParser.GenreOfSong),
+                Genre = Enum.GetName(typeof(O2JamGenre), OjnParser.GenreOfSong),
+                Description = $"This is a Quaver converted version of {OjnParser.NoteCharter}'s map."
+            };
+
+            // No song preview time
+            // No Banner
+
+            // No SVs, only BPM controls SV
+            var timingPoints = new List<TimingPointInfo>();
+            var hitObjects = new List<HitObjectInfo>();
+
+            // TODO: AudioFile
+            var audioFileName = "audio.mp3";
+            // TODO: BackgroundFile
+            var backgroundFileName = "bg.jpg";
+
+            // TODO: Keysounds
+            // List<CustomAudioSampleInfo> CustomAudioSamples;
+            // List<SoundEffectInfo> SoundEffects;
+
+            return qua;
+        }
     }
+
 }

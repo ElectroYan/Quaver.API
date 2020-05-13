@@ -1,8 +1,6 @@
 using Quaver.API.Maps.Parsers.O2Jam.EventPackages;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Quaver.API.Maps.Parsers.O2Jam
 {
@@ -47,7 +45,6 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             return noteCountArray;
         }
 
-
         public bool Validate()
         {
             var packageCountOk = PackageCount == MainPackages.Count;
@@ -61,5 +58,6 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 
             return packageCountOk && eventCountsOk && noteCountOk;
         }
+
     }
 }

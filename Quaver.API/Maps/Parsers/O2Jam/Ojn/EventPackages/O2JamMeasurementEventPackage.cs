@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace Quaver.API.Maps.Parsers.O2Jam.EventPackages
 {
     public class O2JamMeasurementEventPackage : O2JamEventPackage
