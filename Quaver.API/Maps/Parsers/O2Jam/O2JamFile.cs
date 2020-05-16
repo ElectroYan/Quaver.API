@@ -2,6 +2,7 @@ using Quaver.API.Maps.Parsers.O2Jam.EventPackages;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Security.Authentication.ExtendedProtection;
 using System.Text;
@@ -20,6 +21,9 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             OjnParser.Parse();
 
             OjmParser = new OjmParser(OjnParser);
+            OjmParser.Parse();
+
+            OjmParser.SaveAudioTo("Y:/Test");
 
             IsValid = true;
             foreach (O2JamDifficulty difficulty in Enum.GetValues(typeof(O2JamDifficulty)))

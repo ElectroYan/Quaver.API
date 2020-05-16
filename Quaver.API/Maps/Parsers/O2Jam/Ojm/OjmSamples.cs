@@ -15,6 +15,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         public short UnkZero; // Unused in OMC format
         public int PcmSamples; // Unused in OMC format
         public byte[] Data;
+        public string FileName;
     }
 
     public struct OjmSampleWav
@@ -29,5 +30,6 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         public int ChunkData;
         public int SampleSize;
         public byte[] Data;
+        public string FileName;
     }
 }

@@ -7,6 +7,8 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 {
     public class OjmParser
     {
+        private static readonly byte[] XOR_NAMI = new byte[] { 0x6E, 0x61, 0x6D, 0x69 }; // nami
+        private static readonly byte[] XOR_0412 = new byte[] { 0x30, 0x34, 0x31, 0x32 }; // 0412
         private readonly FileStream stream;
 
         public OjmParser(string filePath) => stream = new FileStream(filePath, FileMode.Open);
@@ -14,24 +16,81 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 
         private ByteDecoder decoder;
 
+        public string FileSignature { get; set; }
+        public List<OjmSampleOgg> SampleOggs { get; set; }
+        public List<OjmSampleWav> SampleWav { get; set; }
+
         public void Parse()
         {
 
             decoder = new ByteDecoder(stream);
-            var fileSignature = decoder.ReadString(4);
-            switch (fileSignature)
+            FileSignature = decoder.ReadString(4);
+            switch (FileSignature)
             {
-                case "M30\0":
+                case "M30":
                     ParseAsM30();
                     break;
-                case "OMC\0":
-                    ParseAsOMC();
+                case "OMC":
+                    ParseAsOMC(true);
+                    break;
+                case "OJM":
+                    ParseAsOMC(false);
                     break;
                 default:
                     throw new Exception("Invalid file");
             }
 
             stream.Close();
+        }
+
+        public void SaveAudioTo(string filePath)
+        {
+            if (FileSignature == "OJM" || FileSignature == "OMC")
+            {
+                var sampleId = 0;
+                for (var i = 0; i < SampleWav.Count; i++)
+                {
+                    var item = SampleWav[i];
+
+                    Write($"W{sampleId}.wav", item.Data);
+                    item.FileName = $"W{sampleId}.wav";
+
+                    sampleId++;
+                }
+
+                sampleId = 1000;
+                for (var i = 0; i < SampleOggs.Count; i++)
+                {
+                    var item = SampleOggs[i];
+
+                    Write($"M{sampleId}.ogg", item.Data);
+                    item.FileName = $"M{sampleId}.ogg";
+
+                    sampleId++;
+                }
+            }
+            else
+            {
+                for (var i = 0; i < SampleOggs.Count; i++)
+                {
+                    var item = SampleOggs[i];
+                    if (item.SampleType == 0)
+                    {
+                        Write($"M{1000 + item.SampleNoteIndex}.ogg", item.Data);
+                        item.FileName = $"M{item.SampleNoteIndex}.ogg";
+                    }
+                    else
+                    {
+                        Write($"W{item.SampleNoteIndex}.ogg", item.Data);
+                        item.FileName = $"W{item.SampleNoteIndex}.ogg";
+                    }
+                }
+            }
+
+            void Write(string fileName, byte[] data)
+            {
+                File.WriteAllBytes(Path.Combine(filePath, fileName), data);
+            }
         }
 
         private void ParseAsM30()
@@ -44,7 +103,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             var sampleDataSize = decoder.ReadInt();
             var padding = decoder.ReadBytes(4);
 
-            var samples = new List<OjmSampleOgg>();
+            SampleOggs = new List<OjmSampleOgg>();
 
             for (var i = 0; i < sampleCount; i++)
             {
@@ -60,26 +119,45 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                     PcmSamples = decoder.ReadInt(),
                 };
                 sample.Data = decoder.ReadBytes(sample.SampleSize);
-                for (var j = 0; j < sample.SampleSize - 4; j += 4)
+
+                switch (encryptionSign)
                 {
-                    sample.Data[j + 0] = (byte)('n' ^ sample.Data[j + 0]);
-                    sample.Data[j + 1] = (byte)('a' ^ sample.Data[j + 1]);
-                    sample.Data[j + 2] = (byte)('m' ^ sample.Data[j + 2]);
-                    sample.Data[j + 3] = (byte)('i' ^ sample.Data[j + 3]);
+                    case 0: break;
+                    case 16:
+                        sample.Data = XorM30(sample.Data, XOR_NAMI);
+                        break;
+                    case 32:
+                        sample.Data = XorM30(sample.Data, XOR_0412);
+                        break;
+                    default:
+                        break;
                 }
-                samples.Add(sample);
+
+                SampleOggs.Add(sample);
             }
         }
 
-        private void ParseAsOMC()
+        private byte[] XorM30(byte[] data, byte[] mask)
         {
-            var wavSampleCount = decoder.ReadSingle();
-            var oggSampleCount = decoder.ReadSingle();
+            for (var j = 0; j < data.Length - 3; j += 4)
+            {
+                data[j + 0] = (byte)(mask[0] ^ data[j + 0]);
+                data[j + 1] = (byte)(mask[1] ^ data[j + 1]);
+                data[j + 2] = (byte)(mask[2] ^ data[j + 2]);
+                data[j + 3] = (byte)(mask[3] ^ data[j + 3]);
+            }
+            return data;
+        }
+
+        private void ParseAsOMC(bool decrypt)
+        {
+            var wavSampleCount = decoder.ReadShort();
+            var oggSampleCount = decoder.ReadShort();
             var wavStartOffset = decoder.ReadInt();
             var oggStartOffset = decoder.ReadInt();
             var fileSize = decoder.ReadInt();
 
-            var wavSamples = new List<OjmSampleWav>();
+            SampleWav = new List<OjmSampleWav>();
             stream.Position = wavStartOffset;
             for (var i = 0; i < wavSampleCount; i++)
             {
@@ -94,11 +172,13 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                     ChunkData = decoder.ReadInt(),
                     SampleSize = decoder.ReadInt(),
                 };
-                sample.Data = AccXor(Rearrange(decoder.ReadBytes(sample.SampleSize)));
-                wavSamples.Add(sample);
+                sample.Data = decoder.ReadBytes(sample.SampleSize);
+                if (decrypt)
+                    sample.Data = AccXor(Rearrange(sample.Data));
+                SampleWav.Add(sample);
             }
 
-            var oggSamples = new List<OjmSampleOgg>();
+            SampleOggs = new List<OjmSampleOgg>();
             stream.Position = oggStartOffset;
             for (var i = 0; i < oggSampleCount; i++)
             {
@@ -108,7 +188,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                     SampleSize = decoder.ReadInt()
                 };
                 sample.Data = decoder.ReadBytes(sample.SampleSize);
-                oggSamples.Add(sample);
+                SampleOggs.Add(sample);
             }
 
             stream.Close();

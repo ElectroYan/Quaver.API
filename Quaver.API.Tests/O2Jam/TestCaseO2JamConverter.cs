@@ -12,9 +12,22 @@ namespace Quaver.API.Tests.O2Jam
     public class TestCaseO2JamConverter
     {
         [Fact]
-        public void SuccussfulParse()
+        public void SuccussfulParseM30Header()
         {
             var converter = new O2JamFile("./O2Jam/Resources/o2ma500.ojn");
+            Assert.True(converter.IsValid);
+        }
+        [Fact]
+        public void SuccussfulParseOJMHeader()
+        {
+            var converter = new O2JamFile("./O2Jam/Resources/o2ma487.ojn");
+            Assert.True(converter.IsValid);
+        }
+
+        [Fact]
+        public void SuccussfulParseOMCHeader()
+        {
+            var converter = new O2JamFile("./O2Jam/Resources/o2ma514.ojn");
             Assert.True(converter.IsValid);
         }
 
