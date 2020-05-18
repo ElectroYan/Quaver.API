@@ -124,7 +124,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                             var panSound = (byte)(panSoundAndVolumeNote >> 4); // take the first four bits
                             var volumeNote = (byte)(panSoundAndVolumeNote & 0b00001111); // take the last four bits
                             var noteType = decoder.ReadBytes(1)[0];
-                            eventPackages.Add(new O2JamNoteEventPackage(indexIndicator, panSound, volumeNote, noteType));
+                            eventPackages.Add(new O2JamNoteEventPackage(indexIndicator, panSound, volumeNote, noteType, channel));
                             break;
                         default: // 9-22 are some kind of "auto-play sample notes", which I will ignore
                             decoder.ReadBytes(4);
