@@ -26,7 +26,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam.EventPackages
             IndexIndicator = indexIndicator;
             PanSound = panSound;
             VolumeNote = volumeNote;
-            NoteType = (O2JamNoteType)Enum.ToObject(typeof(O2JamNoteType), noteType);
+            NoteType = (O2JamNoteType)noteType;
             Channel = channel;
         }
 

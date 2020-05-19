@@ -105,19 +105,19 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             where T : O2JamEventPackage
         {
             var snapNeeded = !(snapNumerator == -1 && snapDenominator == -1);
-            var currentSnapRatio = snapNumerator / snapDenominator;
+            var neededSnapRatio = (float)snapNumerator / (float)snapDenominator;
             var validEventPackages = new List<T>();
             foreach (var mainPackage in MainPackages.Where(x => x.Measure == measure))
             {
-                var eventPackageNumber = 0.0f;
-                var count = (float)mainPackage.EventPackages.Count();
+                var eventPackageNumber = 0;
+                var count = mainPackage.EventPackages.Count();
                 foreach (var eventPackage in mainPackage.EventPackages)
                 {
                     var isCorrectType = eventPackage is T;
                     var nonZero = !mustBeNonZero || eventPackage.IsNonZero();
 
-                    var eventSnapRatio = eventPackageNumber / count;
-                    var snapIsCorrect = !snapNeeded || (currentSnapRatio == eventSnapRatio);
+                    var eventSnapRatio = (float)eventPackageNumber / (float)count;
+                    var snapIsCorrect = !snapNeeded || (neededSnapRatio == eventSnapRatio);
 
                     if (isCorrectType && nonZero && snapIsCorrect)
                         validEventPackages.Add((T)eventPackage);
@@ -126,40 +126,6 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                 }
             }
             return validEventPackages;
-        }
-
-        public void Dump(bool printMeasurementEvents = false, bool printBpmEvents = false, bool printNoteEvents = false)
-        {
-
-            var debugString = new StringBuilder();
-
-            foreach (var mainPackage in MainPackages)
-            {
-                debugString.Append($"M {mainPackage.Measure}, C {mainPackage.Channel}\n");
-                foreach (var eventPackage in mainPackage.EventPackages)
-                {
-                    switch (eventPackage)
-                    {
-                        case O2JamMeasurementEventPackage measurementEvent:
-                            if (printMeasurementEvents)
-                                debugString.Append($"    MEA {measurementEvent.Measurement}\n");
-                            break;
-                        case O2JamBpmEventPackage bpmEvent:
-                            if (printBpmEvents)
-                                debugString.Append($"    BPM {bpmEvent.Bpm}\n");
-                            break;
-                        case O2JamNoteEventPackage noteEvent:
-                            if (printNoteEvents)
-                                debugString.Append($"    INDEX {noteEvent.IndexIndicator}, PAN {noteEvent.PanSound}, VOL {noteEvent.VolumeNote}, TYPE {noteEvent.NoteType}\n");
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-
-            System.IO.File.WriteAllText(@"C:\temp.txt", debugString.ToString());
-
         }
     }
 }

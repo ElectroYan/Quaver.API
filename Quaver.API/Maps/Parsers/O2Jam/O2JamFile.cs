@@ -13,6 +13,8 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         public OjmParser OjmParser; // Music file, contains the samples of the map (BGM, keysounds)
         public bool IsValid { get; set; }
 
+        public const int MAX_SNAP_DIVISOR = 192;
+
         public O2JamFile(string ojnFilePath)
         {
             OjnParser = new OjnParser(ojnFilePath);
@@ -37,10 +39,9 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         public Qua ToQua(O2JamDifficulty difficulty)
         {
             var noteChart = OjnParser.GetDifficulty(difficulty);
-            noteChart.Dump(true, true, true);
 
             // No song preview time
-            // No Banner
+            // No banner
             var qua = new Qua
             {
                 MapId = -1,
@@ -58,11 +59,68 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                 Description = $"This is a Quaver converted version of {OjnParser.NoteCharter}'s map."
             };
 
-            var bpmChanges = new List<BpmMeasure>();
-            var noteChanges = new List<NoteMeasure>();
-            var measurementChanges = new List<MeasurementMeasure>();
+            var currentBpm = noteChart.GetNthEventPackageOfType<O2JamBpmEventPackage>(1).Bpm;
 
-            ConvertMainPackages(noteChart, bpmChanges, noteChanges, measurementChanges);
+            var currentOffset = 0.0f;
+            var currentMeasurementFactor = 1.0f;
+
+            for (var measure = 0; measure < noteChart.GetActualMeasureCount(); measure++)
+            {
+                for (var snap = 0; snap < MAX_SNAP_DIVISOR; snap++)
+                {
+                    var eventPackages = noteChart.GetEventPackagesOfTypeInMeasure<O2JamEventPackage>(measure, false, snap, MAX_SNAP_DIVISOR);
+                    foreach (var eventPackage in eventPackages)
+                    {
+                        if (!eventPackage.IsNonZero())
+                            continue;
+
+                        switch (eventPackage)
+                        {
+                            case O2JamMeasurementEventPackage measurementEvent:
+                                currentMeasurementFactor = measurementEvent.Measurement;
+                                break;
+
+                            case O2JamBpmEventPackage bpmEvent:
+                                currentBpm = bpmEvent.Bpm;
+                                qua.TimingPoints.Add(new TimingPointInfo()
+                                {
+                                    StartTime = currentOffset,
+                                    Bpm = bpmEvent.Bpm
+                                });
+                                break;
+
+                            case O2JamNoteEventPackage noteEvent:
+                                var roundedOffset = (int)Math.Round(currentOffset, MidpointRounding.AwayFromZero);
+                                var lane = noteEvent.Channel - 1;
+                                switch (noteEvent.NoteType)
+                                {
+                                    case O2JamNoteType.NormalNote:
+                                    case O2JamNoteType.StartLongNote:
+                                        qua.HitObjects.Add(new HitObjectInfo()
+                                        {
+                                            StartTime = roundedOffset,
+                                            Lane = lane
+                                        });
+                                        break;
+                                    case O2JamNoteType.EndLongNote:
+                                        qua.HitObjects.FindLast(x => x.Lane == lane).EndTime = roundedOffset;
+                                        break;
+                                    case O2JamNoteType.BgmNote:
+                                        break;
+                                    default:
+                                        break;
+                                }
+                                break;
+
+                            default:
+                                break;
+                        }
+                    }
+
+                    var msPerBeat = 60000 * 4 / (currentBpm * MAX_SNAP_DIVISOR);
+                    currentOffset += msPerBeat * currentMeasurementFactor;
+                }
+            }
 
             //// TODO: AudioFile
             //var audioFileName = "audio.mp3";
@@ -74,90 +132,6 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             // List<SoundEffectInfo> SoundEffects;
 
             return qua;
-        }
-
-        private static void ConvertMainPackages(OjnNoteChart noteChart, List<BpmMeasure> bpmChanges, List<NoteMeasure> noteChanges, List<MeasurementMeasure> measurementChanges)
-        {
-            foreach (var mainPackage in noteChart.MainPackages)
-            {
-                if (mainPackage.EventPackages.Count == 0)
-                    continue;
-
-                var snapDivisor = mainPackage.EventPackages.Count;
-
-                for (var i = 0; i < snapDivisor; i++)
-                {
-                    switch (mainPackage.EventPackages[0])
-                    {
-                        case O2JamMeasurementEventPackage _:
-                            var measurementEvent = (O2JamMeasurementEventPackage)mainPackage.EventPackages[i];
-                            if (measurementEvent.Measurement == 0)
-                                continue;
-                            measurementChanges.Add(new MeasurementMeasure
-                            {
-                                MeasurementFactor = measurementEvent.Measurement,
-                                Measure = mainPackage.Measure,
-                                SnapNumerator = i,
-                                SnapDenominator = snapDivisor
-                            });
-                            break;
-                        case O2JamBpmEventPackage _:
-                            var bpmEvent = (O2JamBpmEventPackage)mainPackage.EventPackages[i];
-                            if (bpmEvent.Bpm == 0)
-                                continue;
-                            bpmChanges.Add(new BpmMeasure
-                            {
-                                Bpm = bpmEvent.Bpm,
-                                Measure = mainPackage.Measure,
-                                SnapNumerator = i,
-                                SnapDenominator = snapDivisor
-                            });
-                            break;
-                        case O2JamNoteEventPackage _:
-                            var noteEvent = (O2JamNoteEventPackage)mainPackage.EventPackages[i];
-                            if (noteEvent.IndexIndicator == 0)
-                                continue;
-                            noteChanges.Add(new NoteMeasure
-                            {
-                                Lane = mainPackage.Channel - 1,
-                                SampleIndex = noteEvent.IndexIndicator,
-                                NoteType = noteEvent.NoteType,
-                                Measure = mainPackage.Measure,
-                                SnapNumerator = i,
-                                SnapDenominator = snapDivisor
-                            });
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        }
-
-        private struct BpmMeasure
-        {
-            public float Bpm;
-            public int Measure;
-            public int SnapNumerator;
-            public int SnapDenominator;
-        }
-
-        private struct NoteMeasure
-        {
-            public int Lane;
-            public short SampleIndex;
-            public O2JamNoteType NoteType;
-            public int Measure;
-            public int SnapNumerator;
-            public int SnapDenominator;
-        }
-
-        private struct MeasurementMeasure
-        {
-            public float MeasurementFactor;
-            public int Measure;
-            public int SnapNumerator;
-            public int SnapDenominator;
         }
     }
 }

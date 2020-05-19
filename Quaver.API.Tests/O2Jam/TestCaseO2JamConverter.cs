@@ -27,8 +27,10 @@ namespace Quaver.API.Tests.O2Jam
         public void CheckOjnHitObjectsAndTimingPoints()
         {
             var converter = new O2JamFile("./O2Jam/Resources/o2ma500.ojn");
-            var qua = converter.ToQua(O2JamDifficulty.Easy);
-            //Assert.Equal(150, qua.TimingPoints.First().Bpm);
+            var qua = converter.ToQua(O2JamDifficulty.Hard);
+            Assert.Equal(150, qua.TimingPoints.First().Bpm);
+            Assert.Equal(1, qua.HitObjects.First().Lane);
+            Assert.Equal(6, qua.HitObjects.Last().Lane);
         }
     }
 }
