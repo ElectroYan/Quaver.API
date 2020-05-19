@@ -4,12 +4,23 @@ namespace Quaver.API.Maps.Parsers.O2Jam
     {
         public string SampleName;
         public int SampleSize;
-        public short SampleType; // Unused in OMC format
-        public short UnkFixedData; // Unused in OMC format
-        public int UnkMusicFlag; // Unused in OMC format
-        public short SampleNoteIndex; // Unused in OMC format
-        public short UnkZero; // Unused in OMC format
-        public int PcmSamples; // Unused in OMC format
+
+        /// <summary>
+        /// SampleType = 0:
+        ///     Music file
+        /// SampleType = 5:
+        ///     Keysound
+        /// </summary>
+        public short SampleType; // Unused in OMC/OJM format
+        public short UnkFixedData; // Unused in OMC/OJM format
+        public int UnkMusicFlag; // Unused in OMC/OJM format
+
+        /// <summary>
+        /// Reference index found in the note file
+        /// </summary>
+        public short SampleNoteIndex;
+        public short UnkZero; // Unused in OMC/OJM format
+        public int PcmSamples; // Unused in OMC/OJM format
         public byte[] Data;
         public string FileName;
     }
@@ -27,5 +38,11 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         public int SampleSize;
         public byte[] Data;
         public string FileName;
+
+        /// <summary>
+        /// Reference index found in the note file
+        /// </summary>
+
+        public short SampleNoteIndex;
     }
 }
