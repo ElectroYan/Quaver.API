@@ -2,8 +2,6 @@ using Quaver.API.Maps.Parsers.O2Jam.EventPackages;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 
 namespace Quaver.API.Maps.Parsers.O2Jam
 {
@@ -35,7 +33,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         public int OldFileVersion { get; set; }
         public string Title { get; set; }
         public string Artist { get; set; }
-        public string Notecharter { get; set; }
+        public string NoteCharter { get; set; }
         public string OjmFile { get; set; }
         public int SizeOfJPGFile { get; set; }
         public int ImageOffset { get; set; }
@@ -63,7 +61,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             OldFileVersion = decoder.ReadInt();
             Title = decoder.ReadString(64);
             Artist = decoder.ReadString(32);
-            Notecharter = decoder.ReadString(32);
+            NoteCharter = decoder.ReadString(32);
             OjmFile = decoder.ReadString(32);
             SizeOfJPGFile = decoder.ReadInt();
             var durations = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
@@ -126,7 +124,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                             var panSound = (byte)(panSoundAndVolumeNote >> 4); // take the first four bits
                             var volumeNote = (byte)(panSoundAndVolumeNote & 0b00001111); // take the last four bits
                             var noteType = decoder.ReadBytes(1)[0];
-                            eventPackages.Add(new O2JamNoteEventPackage(indexIndicator, panSound, volumeNote, noteType));
+                            eventPackages.Add(new O2JamNoteEventPackage(indexIndicator, panSound, volumeNote, noteType, channel));
                             break;
                         default: // 9-22 are some kind of "auto-play sample notes", which I will ignore
                             decoder.ReadBytes(4);

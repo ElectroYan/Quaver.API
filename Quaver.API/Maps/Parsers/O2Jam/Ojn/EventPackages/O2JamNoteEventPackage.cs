@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Quaver.API.Maps.Parsers.O2Jam.EventPackages
 {
@@ -19,12 +17,20 @@ namespace Quaver.API.Maps.Parsers.O2Jam.EventPackages
 
         public O2JamNoteType NoteType;
 
-        public O2JamNoteEventPackage(short indexIndicator, byte panSound, byte volumeNote, byte noteType)
+        // This value isn't actually in the note event package, but it helps with convertions
+        // The value can originally be found in the main package, containing the note event
+        public int Channel;
+
+        public O2JamNoteEventPackage(short indexIndicator, byte panSound, byte volumeNote, byte noteType, int channel)
         {
             IndexIndicator = indexIndicator;
             PanSound = panSound;
             VolumeNote = volumeNote;
             NoteType = (O2JamNoteType)noteType;
+            Channel = channel;
         }
+
+        public override bool IsNonZero() => IndexIndicator != 0;
+        public override float GetValue() => IndexIndicator;
     }
 }
