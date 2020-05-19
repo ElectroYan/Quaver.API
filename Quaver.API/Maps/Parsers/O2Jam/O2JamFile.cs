@@ -10,11 +10,17 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 {
     public class O2JamFile
     {
-        public OjnParser OjnParser; // Note file, contains metadata, note data (difficulties) and background image
-        public OjmParser OjmParser; // Music file, contains the samples of the map (BGM, keysounds)
-        public bool IsValid { get; set; }
+        /// <summary>
+        ///     Note file, contains metadata, note data (difficulties) and background image
+        /// </summary>
+        public OjnParser OjnParser;
 
-        public const int MAX_SNAP_DIVISOR = 192;
+        /// <summary>
+        ///     Music file, contains the samples of the map (BGM, keysounds)
+        /// </summary>
+        public OjmParser OjmParser;
+
+        public bool IsValid { get; set; }
 
         public O2JamFile(string ojnFilePath)
         {
@@ -28,10 +34,15 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 
             IsValid = true;
             foreach (O2JamDifficulty difficulty in Enum.GetValues(typeof(O2JamDifficulty)))
-                IsValid &= OjnParser.GetDifficulty(difficulty).Validate();
+                IsValid &= OjnParser.GetDifficulty(difficulty).IsValid();
 
         }
 
+        /// <summary>
+        ///     Converts all difficulties to Qua objects
+        /// </summary>
+        /// <returns>List of Qua objects, one for each difficulty</returns>
+        /// See <see cref="ToQua(O2JamDifficulty)"/> to convert a single difficulty.
         public List<Qua> ToQua()
         {
             var quaList = new List<Qua>();
@@ -40,6 +51,11 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             return quaList;
         }
 
+        /// <summary>
+        ///     
+        /// </summary>
+        /// <param name="difficulty"></param>
+        /// <returns>Qua object</returns>
         public Qua ToQua(O2JamDifficulty difficulty)
         {
             var noteChart = OjnParser.GetDifficulty(difficulty);
@@ -48,25 +64,20 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             // No banner
             var qua = new Qua
             {
-                MapId = -1,
-                MapSetId = -1,
                 Mode = GameMode.Keys7,
                 Source = "O2Jam",
                 HasScratchKey = false,
 
-                Artist = OjnParser.Artist,
-                Title = OjnParser.Title,
+                Artist = OjnParser.SongArtist,
+                Title = OjnParser.SongTitle,
                 Creator = OjnParser.NoteCharter,
-                DifficultyName = $"{Enum.GetName(typeof(O2JamDifficulty), difficulty)}, Lv. {noteChart.Level}",
-                Tags = Enum.GetName(typeof(O2JamGenre), OjnParser.GenreOfSong),
-                Genre = Enum.GetName(typeof(O2JamGenre), OjnParser.GenreOfSong),
+                DifficultyName = $"{Enum.GetName(typeof(O2JamDifficulty), difficulty)}, {noteChart.LevelToString()}",
+                Tags = Enum.GetName(typeof(O2JamGenre), OjnParser.SongGenre),
+                Genre = Enum.GetName(typeof(O2JamGenre), OjnParser.SongGenre),
                 Description = $"This is a Quaver converted version of {OjnParser.NoteCharter}'s map."
             };
 
-            noteChart.ConvertHitObjectsAndBpmsToHelperStructs();
-            noteChart.CalculateTimeOffsets();
             noteChart.AddHitObjectsAndTimingPointsToQua(qua);
-
 
             //// TODO: AudioFile
             //var audioFileName = "audio.mp3";

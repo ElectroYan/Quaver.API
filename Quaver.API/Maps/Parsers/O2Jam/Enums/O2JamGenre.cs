@@ -2,7 +2,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 {
     public enum O2JamGenre
     {
-        Ballad,
+        Ballad = 0,
         Rock,
         Dance,
         Techno,

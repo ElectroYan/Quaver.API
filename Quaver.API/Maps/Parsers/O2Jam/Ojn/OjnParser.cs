@@ -5,11 +5,14 @@ using System.IO;
 
 namespace Quaver.API.Maps.Parsers.O2Jam
 {
+    /// <summary>
+    ///     Note file, contains metadata, note data (difficulties) and background image
+    /// </summary>
     public class OjnParser
     {
-
         private ByteDecoder decoder;
         private readonly FileStream stream;
+
         public OjnParser(string filePath)
         {
             OriginalDirectory = Path.GetDirectoryName(filePath);
@@ -20,34 +23,105 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 
         public string OriginalDirectory { get; set; }
 
-        public int IDSong { get; set; }
+        /// <summary>
+        ///     Song ID, usually the same ID in the name of the file "o2ma###.ojn"
+        /// </summary>
+        public int SongID { get; set; }
+
+        /// <summary>
+        ///     File identifier, content should always be "ojn\0"
+        /// </summary>
         public string FileSignature { get; set; }
-        public byte[] EncodeOJNVersion { get; set; }
-        public O2JamGenre GenreOfSong { get; set; }
-        public byte[] BpmSong { get; set; }
+
+        /// <summary>
+        ///     OJN encoder version, usually 2.9f
+        /// </summary>
+        public byte[] OjnEncoderVersion { get; set; }
+
+        /// <summary>
+        ///     Song genre
+        /// </summary>
+        public O2JamGenre SongGenre { get; set; }
+
+        /// <summary>
+        ///     Songs general BPM. Doesn't actually affect the file itself when changed.
+        /// </summary>
+        public byte[] SongBPM { get; set; }
+
+        /// <summary>
+        ///     Unused field used to pad the binary file for alignment.
+        /// </summary>
         public short EmptyField { get; set; }
+
+        /// <summary>
+        ///     Unused version number
+        /// </summary>
         public short OldEncodeVersion { get; set; }
+
+        /// <summary>
+        ///     Unused song ID
+        /// </summary>
         public short OldSongID { get; set; }
+
+        /// <summary>
+        ///     Unused genre
+        /// </summary>
         public string OldGenre { get; set; }
+
+        /// <summary>
+        ///     Bitmap image size. The bitmap serves as a small 8x8 thumbnail image.
+        /// </summary>
         public int SizeOfBMPImage { get; set; }
+
+        /// <summary>
+        ///     Unused file version.
+        /// </summary>
         public int OldFileVersion { get; set; }
-        public string Title { get; set; }
-        public string Artist { get; set; }
+
+        /// <summary>
+        ///     Song title
+        /// </summary>
+        public string SongTitle { get; set; }
+
+        /// <summary>
+        ///     Song artist
+        /// </summary>
+        public string SongArtist { get; set; }
+
+        /// <summary>
+        ///     Charter/Mapper/Creator
+        /// </summary>
         public string NoteCharter { get; set; }
-        public string OjmFile { get; set; }
+
+        /// <summary>
+        ///     The path to the .ojm file corresponding to the .ojn file, usually "o2ma###.ojm".
+        /// </summary>
+        public string OjmFilePath { get; set; }
+
+        /// <summary>
+        ///     Size of the background file
+        /// </summary>
         public int SizeOfJPGFile { get; set; }
-        public int ImageOffset { get; set; }
+
+        /// <summary>
+        ///     Byte offset of the background image.
+        /// </summary>
+        public int ImageByteOffset { get; set; }
+
+        /// <summary>
+        ///     List of all difficulties (usually Easy, Normal, Hard)
+        /// </summary>
         public List<OjnNoteChart> Difficulties { get; set; }
 
         public void Parse()
         {
             decoder = new ByteDecoder(stream);
 
-            IDSong = decoder.ReadInt();
+            SongID = decoder.ReadInt();
             FileSignature = decoder.ReadString(4);
-            EncodeOJNVersion = decoder.ReadBytes(4);
-            GenreOfSong = (O2JamGenre)decoder.ReadInt();
-            BpmSong = decoder.ReadBytes(4);
+            OjnEncoderVersion = decoder.ReadBytes(4);
+            SongGenre = (O2JamGenre)decoder.ReadInt();
+            SongBPM = decoder.ReadBytes(4);
             var levels = decoder.ReadArray(decoder.ReadShort, numberOfDifficulties);
             EmptyField = decoder.ReadShort();
             var noteCounts = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
@@ -59,14 +133,14 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             OldGenre = decoder.ReadString(20);
             SizeOfBMPImage = decoder.ReadInt();
             OldFileVersion = decoder.ReadInt();
-            Title = decoder.ReadString(64);
-            Artist = decoder.ReadString(32);
+            SongTitle = decoder.ReadString(64);
+            SongArtist = decoder.ReadString(32);
             NoteCharter = decoder.ReadString(32);
-            OjmFile = decoder.ReadString(32);
+            OjmFilePath = decoder.ReadString(32);
             SizeOfJPGFile = decoder.ReadInt();
             var durations = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
             var startingNoteOffsets = decoder.ReadArray(decoder.ReadInt, numberOfDifficulties);
-            ImageOffset = decoder.ReadInt();
+            ImageByteOffset = decoder.ReadInt();
 
             Difficulties = new List<OjnNoteChart>();
 
@@ -99,19 +173,24 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                 var eventCount = decoder.ReadShort();
                 var eventPackages = new List<O2JamEventPackage>();
 
-                // Package
                 for (var eventPackage = 0; eventPackage < eventCount; eventPackage++)
                 {
+                    // Every kind of event package has a total size of 4 bytes.
                     switch (channel)
                     {
+                        // Measurement Event
                         case 0:
-                            var measurement = decoder.ReadSingle();
+                            var measurement = decoder.ReadSingle(); // 4 bytes
                             eventPackages.Add(new O2JamMeasurementEventPackage(measurement));
                             break;
+
+                        // BPM Event
                         case 1:
-                            var bpm = decoder.ReadSingle();
+                            var bpm = decoder.ReadSingle(); // 4 bytes
                             eventPackages.Add(new O2JamBpmEventPackage(bpm));
                             break;
+
+                        // Note event (channel number specifies the lane)
                         case 2:
                         case 3:
                         case 4:
@@ -119,15 +198,17 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                         case 6:
                         case 7:
                         case 8:
-                            var indexIndicator = decoder.ReadShort();
-                            var panSoundAndVolumeNote = decoder.ReadBytes(1)[0]; // each takes half a byte
-                            var panSound = (byte)(panSoundAndVolumeNote >> 4); // take the first four bits
-                            var volumeNote = (byte)(panSoundAndVolumeNote & 0b00001111); // take the last four bits
-                            var noteType = decoder.ReadBytes(1)[0];
-                            eventPackages.Add(new O2JamNoteEventPackage(indexIndicator, panSound, volumeNote, noteType, channel));
+                            var sampleIndex = decoder.ReadShort();                          // 2 bytes
+                            var soundPanAndSoundVolume = decoder.ReadBytes(1)[0];
+                            var soundPan = (byte)(soundPanAndSoundVolume >> 4);             // half a byte
+                            var soundVolume = (byte)(soundPanAndSoundVolume & 0b00001111);  // half a byte
+                            var noteType = decoder.ReadBytes(1)[0];                         // 1 byte
+                            eventPackages.Add(new O2JamNoteEventPackage(sampleIndex, soundPan, soundVolume, noteType));
                             break;
-                        default: // 9-22 are some kind of "auto-play sample notes", which I will ignore
-                            decoder.ReadBytes(4);
+
+                        // 9-22 are some kind of "auto-play sample notes", which I will ignore
+                        default:
+                            decoder.ReadBytes(4); // 4 bytes
                             break;
                     }
                 }
@@ -156,7 +237,10 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             ); ;
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="difficulty"></param>
+        /// <returns></returns>
         public OjnNoteChart GetDifficulty(O2JamDifficulty difficulty) => Difficulties[(int)difficulty];
-
     }
 }

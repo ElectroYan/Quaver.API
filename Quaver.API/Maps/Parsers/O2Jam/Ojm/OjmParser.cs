@@ -12,7 +12,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         private readonly FileStream stream;
 
         public OjmParser(string filePath) => stream = new FileStream(filePath, FileMode.Open);
-        public OjmParser(OjnParser ojn) => stream = new FileStream(Path.Combine(ojn.OriginalDirectory, ojn.OjmFile), FileMode.Open);
+        public OjmParser(OjnParser ojn) => stream = new FileStream(Path.Combine(ojn.OriginalDirectory, ojn.OjmFilePath), FileMode.Open);
 
         private ByteDecoder decoder;
 
