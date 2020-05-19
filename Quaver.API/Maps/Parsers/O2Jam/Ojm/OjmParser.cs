@@ -7,20 +7,37 @@ using System.Text;
 
 namespace Quaver.API.Maps.Parsers.O2Jam
 {
+    /// <summary>
+    ///     Music file, contains sound samples used in a specific chart
+    ///     Represents a universal parser, which can read all possible .ojm formats
+    /// </summary>
+    /// <remarks>OJM -> O2Jam Music</remarks>
     public class OjmParser
     {
+        /// <summary>
+        ///     Constructor
+        /// </summary>
+        /// <param name="filePath"></param>
         public OjmParser(string filePath) => Stream = new FileStream(filePath, FileMode.Open);
         public OjmParser(OjnParser ojn) => Stream = new FileStream(Path.Combine(ojn.OriginalDirectory, ojn.OjmFilePath), FileMode.Open);
 
+        /// <summary>
+        ///     Stream used to read from the file
+        /// </summary>
         protected readonly FileStream Stream;
-        protected ByteDecoder decoder;
-
-        public OjmFormat OjmFormat;
-        public List<OjmSampleOgg> SampleOggs { get; set; }
-        public List<OjmSampleWav> SampleWav { get; set; }
 
         /// <summary>
-        ///     Parses an ojm file
+        ///     Helper, which makes reading values from a binary file easier
+        /// </summary>
+        protected ByteDecoder decoder;
+
+        /// <summary>
+        ///     General class for the provided format, which contains all relevant sound data
+        /// </summary>
+        public OjmFormat OjmFormat;
+
+        /// <summary>
+        ///     Parses an .ojm file
         /// </summary>
         public void Parse()
         {

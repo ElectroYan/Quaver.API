@@ -7,32 +7,48 @@ namespace Quaver.API.Maps.Parsers.O2Jam.Ojm.OjmFormats
 {
     public class OjmFormatM30 : OjmFormat
     {
-        // Bitmasks for M30 xor'ing
-        private static readonly byte[] XOR_NAMI = new byte[] { 0x6E, 0x61, 0x6D, 0x69 }; // nami
-        private static readonly byte[] XOR_0412 = new byte[] { 0x30, 0x34, 0x31, 0x32 }; // 0412
+        /// <summary>
+        ///     Bitmask for Nami encoding
+        /// </summary>
+        private static readonly byte[] XOR_NAMI = new byte[] { 0x6E, 0x61, 0x6D, 0x69 };
 
+        /// <summary>
+        ///     Bitmask for 0412 encoding
+        /// </summary>
+        private static readonly byte[] XOR_0412 = new byte[] { 0x30, 0x34, 0x31, 0x32 };
+
+        /// <summary>
+        ///     Version
+        /// </summary>
         public int Version { get; private set; }
+
+        /// <summary>
+        ///     Encryption sign, decides if to use XOR decrytion (and if yes, which bitmask)
+        /// </summary>
         public int EncryptionSign { get; private set; }
+
+        /// <summary>
+        ///     Number of all samples
+        /// </summary>
         public int SampleCount { get; private set; }
+
+        /// <summary>
+        ///     Byte offset of the first sample in the .ojm binary file
+        /// </summary>
         public int SampleStartOffset { get; private set; }
-        public int SampleDataSize { get; private set; }
-        public byte[] Padding { get; private set; }
 
         public OjmFormatM30(ByteDecoder decoder) : base(decoder, Enums.O2JamOjmFileSignature.M30)
         {
         }
 
-        /// <summary>
-        /// Parses the ojm if the file signature is M30
-        /// </summary>
         public override void Parse()
         {
             Version = decoder.ReadInt();
             EncryptionSign = decoder.ReadInt();
             SampleCount = decoder.ReadInt();
             SampleStartOffset = decoder.ReadInt();
-            SampleDataSize = decoder.ReadInt();
-            Padding = decoder.ReadBytes(4);
+            FileSize = decoder.ReadInt();
+            decoder.ReadBytes(4); // Padding, unused
 
             SampleOggs = new List<OjmSampleOgg>();
 

@@ -12,7 +12,6 @@ namespace Quaver.API.Maps.Parsers.O2Jam.Ojm.OjmFormats
         public short OggSampleCount { get; private set; }
         public int WavStartOffset { get; private set; }
         public int OggStartOffset { get; private set; }
-        public int FileSize { get; private set; }
 
         public OjmFormatOmcOjm(ByteDecoder decoder, O2JamOjmFileSignature fileSignature) : base(decoder, fileSignature)
         {
@@ -88,8 +87,9 @@ namespace Quaver.API.Maps.Parsers.O2Jam.Ojm.OjmFormats
             }
         }
 
-        // vvv Following code is copied from the O2Jam documentation vvv
-        // I have no idea what it does or why it does it but it works
+        // Following code is copied from the O2Jam documentation
+        // We have no idea what it does and why it does what it does, but it works so it stays
+        // All comments below are sic, left as is
         private static readonly byte[] REARRANGE_TABLE = new byte[]{
             0x10, 0x0E, 0x02, 0x09, 0x04, 0x00, 0x07, 0x01,
             0x06, 0x08, 0x0F, 0x0A, 0x05, 0x0C, 0x03, 0x0D,
@@ -163,9 +163,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam.Ojm.OjmFormats
                 int temp = this_byte = buf[i];
 
                 if (((acc_keybyte << acc_counter) & 0x80) != 0)
-                {
                     this_byte = (byte)~this_byte;
-                }
 
                 buf[i] = this_byte;
                 acc_counter++;

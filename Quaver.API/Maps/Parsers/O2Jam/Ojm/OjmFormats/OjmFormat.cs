@@ -6,14 +6,35 @@ using System.Text;
 
 namespace Quaver.API.Maps.Parsers.O2Jam.Ojm.OjmFormats
 {
+    /// <summary>
+    ///     Abstract container for all existing O2Jam formats
+    /// </summary>
     public abstract class OjmFormat
     {
+        /// <summary>
+        ///     Ojm format type
+        /// </summary>
         public O2JamOjmFileSignature FileSignature;
+
+        public int FileSize;
+
+        /// <summary>
+        ///     List of all OGG samples
+        /// </summary>
         public List<OjmSampleOgg> SampleOggs { get; set; }
+
+        /// <summary>
+        ///     List of all OGG samples
+        /// </summary>
         public List<OjmSampleWav> SampleWav { get; set; }
 
         protected ByteDecoder decoder;
 
+        /// <summary>
+        /// ctor
+        /// </summary>
+        /// <param name="decoder"></param>
+        /// <param name="fileSignature"></param>
         public OjmFormat(ByteDecoder decoder, O2JamOjmFileSignature fileSignature)
         {
             this.decoder = decoder;
