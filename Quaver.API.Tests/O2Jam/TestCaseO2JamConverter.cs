@@ -1,4 +1,6 @@
 using Quaver.API.Maps.Parsers.O2Jam;
+using Quaver.API.Maps.Parsers.O2Jam.Enums;
+using Quaver.API.Maps.Parsers.O2Jam.Ojm.OjmFormats;
 using System.Linq;
 using Xunit;
 
@@ -11,6 +13,12 @@ namespace Quaver.API.Tests.O2Jam
         {
             var converter = new O2JamFile("./O2Jam/Resources/o2ma500.ojn");
             Assert.True(converter.IsValid);
+
+            var ojmFormat = converter.OjmParser.OjmFormat;
+            Assert.Equal(O2JamOjmFileSignature.M30, ojmFormat.FileSignature);
+            Assert.Single(ojmFormat.SampleOggs);
+            Assert.Equal("o2ma2666", ojmFormat.SampleOggs.First().SampleName);
+            Assert.Equal(2659994, ((OjmFormatM30)ojmFormat).SampleDataSize);
         }
 
         [Fact]
@@ -18,6 +26,12 @@ namespace Quaver.API.Tests.O2Jam
         {
             var converter = new O2JamFile("./O2Jam/Resources/o2ma487.ojn");
             Assert.True(converter.IsValid);
+
+            var ojmFormat = converter.OjmParser.OjmFormat;
+            Assert.Equal(O2JamOjmFileSignature.OJM, ojmFormat.FileSignature);
+            Assert.Single(ojmFormat.SampleOggs);
+            Assert.Equal("1.ogg", ojmFormat.SampleOggs.First().SampleName);
+            Assert.Equal(3317315, ((OjmFormatOmcOjm)ojmFormat).FileSize);
         }
 
         [Fact]
@@ -25,6 +39,11 @@ namespace Quaver.API.Tests.O2Jam
         {
             var converter = new O2JamFile("./O2Jam/Resources/o2ma514.ojn");
             Assert.True(converter.IsValid);
+
+            var ojmFormat = converter.OjmParser.OjmFormat;
+            Assert.Equal(O2JamOjmFileSignature.OMC, ojmFormat.FileSignature);
+            Assert.Single(ojmFormat.SampleOggs);
+            Assert.Equal(3507123, ((OjmFormatOmcOjm)ojmFormat).FileSize);
         }
 
         [Fact]

@@ -30,7 +30,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
             OjmParser = new OjmParser(OjnParser);
             OjmParser.Parse();
 
-            // OjmParser.SaveAudioTo(ojnFilePath);
+            //OjmParser.OjmFormat.SaveAudioTo(ojnFilePath);
 
             IsValid = true;
             foreach (O2JamDifficulty difficulty in Enum.GetValues(typeof(O2JamDifficulty)))
