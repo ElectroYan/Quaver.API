@@ -1,21 +1,22 @@
+using Quaver.API.Enums;
 using Quaver.API.Maps.Parsers.O2Jam.EventPackages;
+using Quaver.API.Maps.Structures;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Security.Authentication.ExtendedProtection;
 using System.Text;
 
-namespace Quaver.API.Maps.Parsers.O2Jam {
-    public class O2JamFile {
+namespace Quaver.API.Maps.Parsers.O2Jam
+{
+    public class O2JamFile
+    {
         public OjnParser OjnParser; // Note file, contains metadata, note data (difficulties) and background image
         public OjmParser OjmParser; // Music file, contains the samples of the map (BGM, keysounds)
         public bool IsValid { get; set; }
 
         public const int MAX_SNAP_DIVISOR = 192;
 
-        public O2JamFile(string ojnFilePath) {
+        public O2JamFile(string ojnFilePath)
+        {
             OjnParser = new OjnParser(ojnFilePath);
             OjnParser.Parse();
 
@@ -30,19 +31,22 @@ namespace Quaver.API.Maps.Parsers.O2Jam {
 
         }
 
-        public List<Qua> ToQua() {
+        public List<Qua> ToQua()
+        {
             var quaList = new List<Qua>();
             foreach (O2JamDifficulty difficulty in Enum.GetValues(typeof(O2JamDifficulty)))
                 ToQua(difficulty);
             return quaList;
         }
 
-        public Qua ToQua(O2JamDifficulty difficulty) {
+        public Qua ToQua(O2JamDifficulty difficulty)
+        {
             var noteChart = OjnParser.GetDifficulty(difficulty);
 
             // No song preview time
             // No banner
-            var qua = new Qua {
+            var qua = new Qua
+            {
                 MapId = -1,
                 MapSetId = -1,
                 Mode = GameMode.Keys7,
@@ -63,21 +67,26 @@ namespace Quaver.API.Maps.Parsers.O2Jam {
             var currentOffset = 0.0f;
             var currentMeasurementFactor = 1.0f;
 
-            for (var measure = 0; measure < noteChart.GetActualMeasureCount(); measure++) {
-                for (var snap = 0; snap < MAX_SNAP_DIVISOR; snap++) {
+            for (var measure = 0; measure < noteChart.GetActualMeasureCount(); measure++)
+            {
+                for (var snap = 0; snap < MAX_SNAP_DIVISOR; snap++)
+                {
                     var eventPackages = noteChart.GetEventPackagesOfTypeInMeasure<O2JamEventPackage>(measure, false, snap, MAX_SNAP_DIVISOR);
-                    foreach (var eventPackage in eventPackages) {
+                    foreach (var eventPackage in eventPackages)
+                    {
                         if (!eventPackage.IsNonZero())
                             continue;
 
-                        switch (eventPackage) {
+                        switch (eventPackage)
+                        {
                             case O2JamMeasurementEventPackage measurementEvent:
                                 currentMeasurementFactor = measurementEvent.Measurement;
                                 break;
 
                             case O2JamBpmEventPackage bpmEvent:
                                 currentBpm = bpmEvent.Bpm;
-                                qua.TimingPoints.Add(new TimingPointInfo() {
+                                qua.TimingPoints.Add(new TimingPointInfo()
+                                {
                                     StartTime = currentOffset,
                                     Bpm = bpmEvent.Bpm
                                 });
@@ -86,10 +95,12 @@ namespace Quaver.API.Maps.Parsers.O2Jam {
                             case O2JamNoteEventPackage noteEvent:
                                 var roundedOffset = (int)Math.Round(currentOffset, MidpointRounding.AwayFromZero);
                                 var lane = noteEvent.Channel - 1;
-                                switch (noteEvent.NoteType) {
+                                switch (noteEvent.NoteType)
+                                {
                                     case O2JamNoteType.NormalNote:
                                     case O2JamNoteType.StartLongNote:
-                                        qua.HitObjects.Add(new HitObjectInfo() {
+                                        qua.HitObjects.Add(new HitObjectInfo()
+                                        {
                                             StartTime = roundedOffset,
                                             Lane = lane
                                         });
