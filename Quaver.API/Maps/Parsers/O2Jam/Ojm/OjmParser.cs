@@ -12,7 +12,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         private readonly FileStream stream;
 
         public OjmParser(string filePath) => stream = new FileStream(filePath, FileMode.Open);
-        public OjmParser(OjnParser ojn) => stream = new FileStream(Path.Combine(ojn.OriginalDirectory, ojn.OjmFile), FileMode.Open);
+        public OjmParser(OjnParser ojn) => stream = new FileStream(Path.Combine(ojn.OriginalDirectory, ojn.OjmFilePath), FileMode.Open);
 
         private ByteDecoder decoder;
 
@@ -68,8 +68,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 
                     sampleId++;
                 }
-            }
-            else
+            } else
             {
                 for (var i = 0; i < SampleOggs.Count; i++)
                 {
@@ -78,8 +77,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                     {
                         Write($"M{1000 + item.SampleNoteIndex}.ogg", item.Data);
                         item.FileName = $"M{item.SampleNoteIndex}.ogg";
-                    }
-                    else
+                    } else
                     {
                         Write($"W{item.SampleNoteIndex}.ogg", item.Data);
                         item.FileName = $"W{item.SampleNoteIndex}.ogg";
@@ -95,7 +93,6 @@ namespace Quaver.API.Maps.Parsers.O2Jam
 
         private void ParseAsM30()
         {
-            var enc = new UTF8Encoding(true);
             var version = decoder.ReadInt();
             var encryptionSign = decoder.ReadInt();
             var sampleCount = decoder.ReadInt();

@@ -2,35 +2,45 @@ using System;
 
 namespace Quaver.API.Maps.Parsers.O2Jam.EventPackages
 {
+    /// <summary>
+    ///     Represents notes for one measure for one lane
+    /// </summary>
     public class O2JamNoteEventPackage : O2JamEventPackage
     {
-        // W### or M###
-        public short IndexIndicator;
+        /// <summary>
+        ///     Reference to the sound sample index in the .ojm file.
+        ///     0 means no note (event is ignored)
+        /// </summary>
+        public short SampleIndex;
 
-        // 1~7 = left -> center, 0 or 8 = center, 9~15 = center -> right
-        // uses half a byte
-        public byte PanSound;
+        /// <summary>
+        ///     Panning of the sound in a stereo environment
+        ///     1~7 = left - center
+        ///     0 or 8 = center
+        ///     9~15 = center - right 
+        /// </summary>
+        /// <remarks>Uses half a byte</remarks>
+        public byte SoundPan;
 
-        // The volume to play the sample from 1~15, and 0 is the max volume.
-        // uses half a byte
-        public byte VolumeNote;
+        /// <summary>
+        ///     Volume to play the sample from 0-15, 0 is the max volume.
+        /// </summary>
+        /// <remarks>Uses half a byte</remarks>
+        public byte SoundVolume;
 
+        /// <summary>
+        ///     Note type, see <see cref="O2JamNoteType"/>
+        /// </summary>
         public O2JamNoteType NoteType;
 
-        // This value isn't actually in the note event package, but it helps with convertions
-        // The value can originally be found in the main package, containing the note event
-        public int Channel;
-
-        public O2JamNoteEventPackage(short indexIndicator, byte panSound, byte volumeNote, byte noteType, int channel)
+        public O2JamNoteEventPackage(short sampleIndex, byte soundPan, byte soundVolume, byte noteType)
         {
-            IndexIndicator = indexIndicator;
-            PanSound = panSound;
-            VolumeNote = volumeNote;
+            SampleIndex = sampleIndex;
+            SoundPan = soundPan;
+            SoundVolume = soundVolume;
             NoteType = (O2JamNoteType)noteType;
-            Channel = channel;
         }
 
-        public override bool IsNonZero() => IndexIndicator != 0;
-        public override float GetValue() => IndexIndicator;
+        public override bool IsNonZero() => SampleIndex != 0;
     }
 }

@@ -12,6 +12,7 @@ namespace Quaver.API.Tests.O2Jam
             var converter = new O2JamFile("./O2Jam/Resources/o2ma500.ojn");
             Assert.True(converter.IsValid);
         }
+
         [Fact]
         public void SuccussfulParseOJMHeader()
         {
@@ -30,10 +31,13 @@ namespace Quaver.API.Tests.O2Jam
         public void CheckOjnMetadata()
         {
             var converter = new O2JamFile("./O2Jam/Resources/o2ma500.ojn");
-            Assert.Equal(500, converter.OjnParser.IDSong);
-            Assert.Equal("DM Ashura", converter.OjnParser.Artist);
-            Assert.Equal("o2ma500.ojm", converter.OjnParser.OjmFile);
+            Assert.Equal(500, converter.OjnParser.SongID);
+            Assert.Equal("DM Ashura", converter.OjnParser.SongArtist);
+            Assert.Equal("o2ma500.ojm", converter.OjnParser.OjmFilePath);
             Assert.Equal(27, converter.OjnParser.Difficulties[0].Level);
+
+            converter = new O2JamFile("./O2Jam/Resources/testing.ojn");
+            Assert.Equal(O2JamGenre.Others, converter.OjnParser.SongGenre);
         }
 
         [Fact]
@@ -44,6 +48,11 @@ namespace Quaver.API.Tests.O2Jam
             Assert.Equal(150, qua.TimingPoints.First().Bpm);
             Assert.Equal(1, qua.HitObjects.First().Lane);
             Assert.Equal(6, qua.HitObjects.Last().Lane);
+
+            converter = new O2JamFile("./O2Jam/Resources/testing.ojn");
+            qua = converter.ToQua(O2JamDifficulty.Easy);
+            Assert.Equal(200, qua.TimingPoints.First().Bpm);
+            Assert.Equal(1, qua.HitObjects.First().Lane);
         }
     }
 }
