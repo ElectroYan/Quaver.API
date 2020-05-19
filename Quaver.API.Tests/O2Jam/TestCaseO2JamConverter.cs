@@ -44,6 +44,11 @@ namespace Quaver.API.Tests.O2Jam
             Assert.Equal(150, qua.TimingPoints.First().Bpm);
             Assert.Equal(1, qua.HitObjects.First().Lane);
             Assert.Equal(6, qua.HitObjects.Last().Lane);
+
+            converter = new O2JamFile("./O2Jam/Resources/testing.ojn");
+            qua = converter.ToQua(O2JamDifficulty.Easy);
+            Assert.Equal(200, qua.TimingPoints.First().Bpm);
+            Assert.Equal(1, qua.HitObjects.First().Lane);
         }
     }
 }
