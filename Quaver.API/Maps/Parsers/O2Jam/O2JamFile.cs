@@ -3,6 +3,7 @@ using Quaver.API.Maps.Parsers.O2Jam.EventPackages;
 using Quaver.API.Maps.Structures;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Quaver.API.Maps.Parsers.O2Jam
@@ -62,68 +63,10 @@ namespace Quaver.API.Maps.Parsers.O2Jam
                 Description = $"This is a Quaver converted version of {OjnParser.NoteCharter}'s map."
             };
 
-            var currentBpm = noteChart.GetNthEventPackageOfType<O2JamBpmEventPackage>(1).Bpm;
+            noteChart.ConvertHitObjectsAndBpmsToHelperStructs();
+            noteChart.CalculateTimeOffsets();
+            noteChart.AddHitObjectsAndTimingPointsToQua(qua);
 
-            var currentOffset = 0.0f;
-            var currentMeasurementFactor = 1.0f;
-
-            for (var measure = 0; measure < noteChart.GetActualMeasureCount(); measure++)
-            {
-                for (var snap = 0; snap < MAX_SNAP_DIVISOR; snap++)
-                {
-                    var eventPackages = noteChart.GetEventPackagesOfTypeInMeasure<O2JamEventPackage>(measure, false, snap, MAX_SNAP_DIVISOR);
-                    foreach (var eventPackage in eventPackages)
-                    {
-                        if (!eventPackage.IsNonZero())
-                            continue;
-
-                        switch (eventPackage)
-                        {
-                            case O2JamMeasurementEventPackage measurementEvent:
-                                currentMeasurementFactor = measurementEvent.Measurement;
-                                break;
-
-                            case O2JamBpmEventPackage bpmEvent:
-                                currentBpm = bpmEvent.Bpm;
-                                qua.TimingPoints.Add(new TimingPointInfo()
-                                {
-                                    StartTime = currentOffset,
-                                    Bpm = bpmEvent.Bpm
-                                });
-                                break;
-
-                            case O2JamNoteEventPackage noteEvent:
-                                var roundedOffset = (int)Math.Round(currentOffset, MidpointRounding.AwayFromZero);
-                                var lane = noteEvent.Channel - 1;
-                                switch (noteEvent.NoteType)
-                                {
-                                    case O2JamNoteType.NormalNote:
-                                    case O2JamNoteType.StartLongNote:
-                                        qua.HitObjects.Add(new HitObjectInfo()
-                                        {
-                                            StartTime = roundedOffset,
-                                            Lane = lane
-                                        });
-                                        break;
-                                    case O2JamNoteType.EndLongNote:
-                                        qua.HitObjects.FindLast(x => x.Lane == lane).EndTime = roundedOffset;
-                                        break;
-                                    case O2JamNoteType.BgmNote:
-                                        break;
-                                    default:
-                                        break;
-                                }
-                                break;
-
-                            default:
-                                break;
-                        }
-                    }
-
-                    var msPerBeat = 60000 * 4 / (currentBpm * MAX_SNAP_DIVISOR);
-                    currentOffset += msPerBeat * currentMeasurementFactor;
-                }
-            }
 
             //// TODO: AudioFile
             //var audioFileName = "audio.mp3";

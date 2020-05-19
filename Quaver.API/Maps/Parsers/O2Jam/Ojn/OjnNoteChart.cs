@@ -1,4 +1,5 @@
 using Quaver.API.Maps.Parsers.O2Jam.EventPackages;
+using Quaver.API.Maps.Structures;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,6 +21,10 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         public int StartingNoteOffset { get; set; }
         public List<O2JamMainPackage> MainPackages { get; set; }
 
+        public List<O2JamNote> Notes;
+        public List<O2JamBpm> Bpms;
+        public const int MAX_SNAP_DIVISOR = 192;
+
         public OjnNoteChart(O2JamDifficulty difficulty, int level, int noteCount, int playableNoteCount, int measureCount, int packageCount, int duration, int startingNoteOffset, List<O2JamMainPackage> packages)
         {
             Difficulty = difficulty;
@@ -37,7 +42,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         {
             var packageCountOk = PackageCount == MainPackages.Count;
 
-            // Autoplay samples (channel 9-22) are ignored so the count is going to be 0
+            // Autoplay samples (channel 9-22) are ignored, so the count is going to be 0
             var eventCountsOk = MainPackages.TrueForAll(
                 p =>
                     p.EventCount == p.EventPackages.Count
@@ -74,58 +79,120 @@ namespace Quaver.API.Maps.Parsers.O2Jam
         /// <returns>The maximum measure of the provided .ojn file</returns>
         public int GetActualMeasureCount() => MainPackages.Select(mainPackage => mainPackage.Measure).Max();
 
-        public T GetNthEventPackageOfType<T>(int n, bool mustBeNonZero = true)
-            where T : O2JamEventPackage
+        public void ConvertHitObjectsAndBpmsToHelperStructs()
         {
-            var count = 0;
+            Notes = new List<O2JamNote>();
+            Bpms = new List<O2JamBpm>();
             foreach (var mainPackage in MainPackages)
             {
-                foreach (var eventPackage in mainPackage.EventPackages)
-                {
-                    if (eventPackage is T && (!mustBeNonZero || eventPackage.IsNonZero()))
-                        count++;
-                    if (count == n)
-                        return (T)eventPackage;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        ///     Gets all event packages in a particular measure.
-        /// </summary>
-        /// <typeparam name="T">Should be an O2JamEventPackage</typeparam>
-        /// <param name="measure">Measure to look in</param>
-        /// <param name="mustBeNonZero">Include all non-zero (buffer) elements?</param>
-        /// <param name="snapNumerator">Optional to match packages at an exact snap, otherwise returns all packages in a measure</param>
-        /// <param name="snapDenominator">Optional to match packages at an exact snap, otherwise returns all packages in a measure</param>
-        /// <returns>List of all valid event packages, null if none are found</returns>
-        public List<T> GetEventPackagesOfTypeInMeasure<T>(int measure, bool mustBeNonZero = true, int snapNumerator = -1, int snapDenominator = -1)
-            where T : O2JamEventPackage
-        {
-            var snapNeeded = !(snapNumerator == -1 && snapDenominator == -1);
-            var neededSnapRatio = (float)snapNumerator / (float)snapDenominator;
-            var validEventPackages = new List<T>();
-            foreach (var mainPackage in MainPackages.Where(x => x.Measure == measure))
-            {
                 var eventPackageNumber = 0;
-                var count = mainPackage.EventPackages.Count();
                 foreach (var eventPackage in mainPackage.EventPackages)
                 {
-                    var isCorrectType = eventPackage is T;
-                    var nonZero = !mustBeNonZero || eventPackage.IsNonZero();
-
-                    var eventSnapRatio = (float)eventPackageNumber / (float)count;
-                    var snapIsCorrect = !snapNeeded || (neededSnapRatio == eventSnapRatio);
-
-                    if (isCorrectType && nonZero && snapIsCorrect)
-                        validEventPackages.Add((T)eventPackage);
+                    if (eventPackage.IsNonZero())
+                    {
+                        var snapPosition = mainPackage.Measure * MAX_SNAP_DIVISOR + eventPackageNumber * MAX_SNAP_DIVISOR / mainPackage.EventPackages.Count();
+                        switch (eventPackage)
+                        {
+                            case O2JamBpmEventPackage bpmEvent:
+                                Bpms.Add(new O2JamBpm
+                                {
+                                    SnapPosition = snapPosition,
+                                    BpmValue = bpmEvent.Bpm
+                                });
+                                break;
+                            case O2JamNoteEventPackage noteEvent:
+                                Notes.Add(new O2JamNote
+                                {
+                                    SnapPosition = snapPosition,
+                                    Lane = mainPackage.Channel - 1,
+                                    NoteType = noteEvent.NoteType,
+                                    IndexIndicator = noteEvent.IndexIndicator
+                                });
+                                break;
+                            default:
+                                break;
+                        }
+                    }
 
                     eventPackageNumber++;
                 }
             }
-            return validEventPackages;
+
+            Notes.OrderBy(x => x.SnapPosition);
+            Bpms.OrderBy(x => x.SnapPosition);
+        }
+
+        public void CalculateTimeOffsets()
+        {
+            var referenceTime = TimeSpan.Zero;
+            var bpmIndex = 0;
+
+            for (var i = 0; i < Notes.Count(); i++)
+            {
+                var note = Notes[i];
+                while (bpmIndex + 1 < Bpms.Count() && note.SnapPosition > Bpms[bpmIndex + 1].SnapPosition)
+                {
+                    referenceTime += TimeSpan.FromSeconds((Bpms[bpmIndex + 1].SnapPosition - Bpms[bpmIndex].SnapPosition) / (Bpms[bpmIndex].BpmValue * 0.8));
+                    bpmIndex++;
+                    var bpm = Bpms[bpmIndex];
+                    bpm.Time = referenceTime;
+                    Bpms[bpmIndex] = bpm;
+                }
+
+                note.Time = TimeSpan.FromSeconds((note.SnapPosition - Bpms[bpmIndex].SnapPosition) / (Bpms[bpmIndex].BpmValue * 0.8)) + referenceTime;
+                Notes[i] = note;
+            }
+        }
+
+        public void AddHitObjectsAndTimingPointsToQua(Qua qua)
+        {
+            foreach (var bpm in Bpms)
+            {
+                qua.TimingPoints.Add(new TimingPointInfo()
+                {
+                    Bpm = bpm.BpmValue,
+                    StartTime = (float)bpm.Time.TotalMilliseconds
+                });
+            }
+
+            foreach (var note in Notes)
+            {
+                var time = (int)Math.Round(note.Time.TotalMilliseconds, MidpointRounding.AwayFromZero);
+                switch (note.NoteType)
+                {
+                    case O2JamNoteType.NormalNote:
+                    case O2JamNoteType.StartLongNote:
+                        qua.HitObjects.Add(new HitObjectInfo
+                        {
+                            StartTime = time,
+                            Lane = note.Lane
+                        });
+                        break;
+                    case O2JamNoteType.EndLongNote:
+                        qua.HitObjects.FindLast(x => x.Lane == note.Lane).EndTime = time;
+                        break;
+                    case O2JamNoteType.BgmNote:
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        public struct O2JamNote
+        {
+            public int SnapPosition; // in a 1/192 grid
+            public int Lane;
+            public O2JamNoteType NoteType;
+            public TimeSpan Time;
+            public int IndexIndicator;
+        }
+
+        public struct O2JamBpm
+        {
+            public int SnapPosition; // in a 1/192 grid
+            public float BpmValue;
+            public TimeSpan Time;
         }
     }
 }
