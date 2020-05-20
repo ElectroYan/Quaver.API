@@ -8,6 +8,7 @@ namespace Quaver.API.Maps.Parsers.O2Jam
     /// <summary>
     ///     Note file, contains metadata, note data (difficulties) and background image
     /// </summary>
+    /// <remarks>OJn -> O2Jam Note</remarks>
     public class OjnParser
     {
         private ByteDecoder decoder;
